@@ -622,7 +622,7 @@ mHMM <- function(s_data, gen, xx = NULL, start_val, mcmc, return_path = FALSE, p
     colnames(gamma_cov_bar) <- paste( paste("cov", 1 : (nx[1] - 1), "_", sep = ""), "S", rep(1:m, each = (m-1) * (nx[1] - 1)), "toS", rep(2:m, m * (nx[1] - 1)), sep = "")
     gamma_cov_bar[1,] <- 0
   } else{
-    gamma_cov_bar <- "No covariates where used to predict the transition probability matrix"
+    gamma_cov_bar <- "No covariates were used to predict the transition probability matrix"
   }
   emiss_int_bar			<- lapply((q_emiss-1) * m, dif_matrix, rows = J)
   names(emiss_int_bar) <- dep_labels
@@ -638,11 +638,11 @@ mHMM <- function(s_data, gen, xx = NULL, start_val, mcmc, return_path = FALSE, p
         colnames(emiss_cov_bar[[q]]) <-  paste( paste("cov", 1 : (nx[1 + q] - 1), "_", sep = ""), "emiss", rep(2:q_emiss[q], m * (nx[1 + q] - 1)), "_S", rep(1:m, each = (q_emiss[q] - 1) * (nx[1 + q] - 1)), sep = "")
         emiss_cov_bar[[q]][1,] <- 0
       } else {
-        emiss_cov_bar[[q]] <- "No covariates where used to predict the emission probabilities for this outcome"
+        emiss_cov_bar[[q]] <- "No covariates were used to predict the emission probabilities for this outcome"
       }
     }
   } else{
-    emiss_cov_bar <- "No covariates where used to predict the emission probabilities"
+    emiss_cov_bar <- "No covariates were used to predict the emission probabilities"
   }
 
   # Define object for subject specific posterior density (regression coefficients parameterization )
