@@ -26,11 +26,14 @@ knitr::opts_chunk$set(
 
 ## Introduction
 Hidden Markov models [HMMs; @Rabiner1989] are a machine learning method that have been used in many different scientific fields to describe a sequence of observations for several decades. For example, translating a fragment of spoken words into text [i.e., speech recognition, see e.g. @Rabiner1989; @woodland2002], or the identification of the regions of DNA that encode genes [i.e., gene tagging, see e.g., @krogh1994; @henderson1997; @burge1998]. The development of this package is, however, motivated from the area of social sciences. Due to technological advancements, it becomes increasingly easy to collect long sequences of data on behavior. That is, we can monitor behavior as it unfolds in real time. An example here of is the interaction between a therapist and a patient, where different types of nonverbal communication are registered every second for a period of 15 minutes. When applying HMMs to such behavioral data, they can be used to extract latent behavioral states over time, and model the dynamics of behavior over time. \
+
 A quite recent development in HMMs is the extension to multilevel HMMs [see e.g., @altman2007; @shirley2010; @rueda2013; @zhang2014; @deHaan2017]. Using the multilevel framework, we can model several sequences (e.g., sequences of different persons) simultaneously, while accommodating the heterogeneity between persons. As a result, we can quantify the amount of variation between persons in their dynamics of behavior, easily perform group comparisons on the model parameters, and investigate how model parameters change as a result of a covariate. For example, are the dynamics between a patient and a therapist different for patients with a good therapeutic outcome and patients with a less favorable therapeutic outcome? \
+
 With the package `mHMMbayes`, one can estimate these multilevel hidden Markov models. This tutorial starts out with a brief description of the HMM and the multilevel HMM. For a more elaborate and gentle introduction to HMMs, we refer to @zucchini2016. Next, we show how to use the package `mHMMbayes` through an extensive example, also touching on the issues of determining the number of hidden states and checking model convergence. Information on the used estimation methods and algorithms in the package is given in the vignette [Estimation of the multilevel hidden Markov model](estimation-mhmm.pdf). 
 
 ## Hidden Markov models
 Hidden Markov Models are used for data for which 1) we believe that the distribution generating the observation depends on the state of an underlying, hidden state, and 2) the hidden states follow a Markov process, i.e., the states over time are not independent of one another, but the current state  depends on the previous state only (and not on earlier states) [see e.g., @Rabiner1989; @ephraim2002; @cappe2005; @zucchini2016].  The HMM is a discrete time model: for each point in time $t$, we have one hidden state that generates one observed event for that time point $t$. \
+
 Hence, the probability of observing the current outcome $O_t$ is exclusively determined by the current latent state $S_t$:
 
 \begin{equation}
@@ -45,6 +48,7 @@ Pr(S_{t+1} \mid \ S_{t}, S_{t-1}, \ldots, S_{1}) = Pr(S_{t+1} \mid S_{t}).
 \end{equation}
 
 That is, the probability of switching to the next state $S_{t+1}$ depends only on the current state $S_t$. As the HMM is a discrete time model, the duration of a state is represented by the self-transition probabilities $\gamma_{ii}$, where the probability of a certain time t spent in state $S$ is given by the geometric distribution: $\gamma_{ii}^{t-1}(1-\gamma_{ii})$. \
+
 The HMM includes three sets of parameters: the initial probabilities of the states $\pi_i$, the matrix $\mathbf{\Gamma}$ including the transition probabilities $\gamma_{ij}$ between the states, and the state-dependent probability distribution of observing $O_t$ given $S_t$ with parameter set $\boldsymbol{\theta}_i$.  The initial probabilities $\pi_i$ denote the probability that the first state in the hidden state sequence, $S_1$, is $i$: 
 
 \begin{equation}
@@ -68,8 +72,11 @@ We assume that all parameters in the HMM are independent of $t$, i.e., we assume
  
 ## Multilevel hidden Markov models
 Given data of multiple subjects, one may fit the HMM to the data of each subject separately, or fit one and the same HMM model to the data of all subject, under the strong (generally untenable) assumption that the subjects do not differ with respect to the parameters of the HMM. Fitting a different model to each behavioral sequence is not parsimonious, computationally intensive, and results in a large number of parameters estimates. Neither approach lends itself well for a formal comparison (e.g., comparing the parameters over experimental conditions). To facilitate the analysis of multiple subjects, the HMM is extended by putting it in a multilevel framework. \
+
 In multilevel models, model parameters are specified that pertain to different levels in the data. For example, subject-specific model parameters describe the data collected within each subject, and group level parameters describe what is typically observed within the group of subjects, and the variation observed between subjects. In the implemented multilevel HMM, we allow each subject to have its own unique parameter values within the same HMM model (i.e., identical number and similar composition of the hidden states). Rather than estimating these subject-specific parameters individually, we assume that the parameters of the HMM are random, i.e., follow a given group level distribution. Within this multilevel structure, the mean and the variance of the group level distribution of a given parameter thus expresses the overall mean parameter value in a group of subjects and the parameter variability between the subjects in the group.  \
+
 Multilevel HMMs have received some attention in the literature. In a frequentist context, @altman2007 presented a general framework for HMMs for multiple processes by defining a class of Mixed Hidden Markov Models (MHMMs). These models are however, computationally intensive and due to slow convergence only suited for modeling a limited number of random effects. The approach of Altman has been translated to the Bayesian framework, which proved much faster as the time to reach convergence is decreased @zhang2014. In addition, the HMM in a Bayesian context is easier to adapt to a multilevel model, as the need for numerical integration is eliminated. Examples of the application of the multilevel HMM (within a Bayesian framework) are: @rueda2013 applied the model to the analysis of DNA copy number data, @zhang2014 to identify risk factors for asthma, @shirley2010 to clinical trial data of a treatment for alcoholism and @deHaan2017 to longitudinal data sets in psychology. \
+
 In the tutorial, we use the following notation for the parameters in the multilevel HMM. The subject specific parameters are supplemented with the prefix $k$, denoting subject $k \in \{1,2,\ldots,K\}$. Hence, in the multilevel (Bayesian) HMM, the subject specific parameters are: the subject-specific transition probability matrix $\boldsymbol{\Gamma}_k$ with transition probabilities $\gamma_{k,ij}$, and the subject-specific emission distributions denoting subject-specific probabilities $\boldsymbol{\theta}_{k,i}$ of categorical outcomes within hidden state $i$.  The initial probabilities of the states $\pi_{k,j}$ are not estimated as $\pi_{k}$ is assumed to be the stationary distribution of $\boldsymbol{\Gamma}_k$. The group level parameters are: the group level state transition probability matrix  $\boldsymbol{\Gamma}$ with transition probabilities $\gamma_{ij}$, and the group level state-dependent probabilities $\boldsymbol{\theta}_{i}$. We fit the model using Bayesian estimation (i.e., a hybrid Metropolis Gibbs sampler that utilizes the forward-backward recursion to sample the hidden state sequence of each subject, see the vignette [Estimation of the multilevel hidden Markov model](estimation-mhmm.pdf)). 
 
 ## Using the package mHMMbayes
@@ -185,8 +192,11 @@ The subsequent lines of code specify starting values for both the transition pro
 
 #### Prior distributions
 As the estimation proceeds within a Bayesian context, a (hyper-)prior distribution has to be defined for the group level parameters, i.e., the group level emission and transition probabilities. Default, non-informative priors are used unless specified otherwise by the user. Below, we present some information on this. For a more elaborate explanation on the used (hyper-)prior distributions and their parameters, see the vignette [Estimation of the multilevel hidden Markov model](estimation-mhmm.pdf). \
+
 First of all, note that the prior distributions on the emission distribution and transition probabilities are not on the probabilities directly, but on the intercepts (and regression coefficients given that covariates are used) of the multinomial regression model used to accommodate the multilevel framework of the data. Second, parameters do not each have their own independent prior distribution. As each row of the emission distribution matrix and transition probability matrix sum to one, the individual parameters of these rows are connected. Hence, each row is seen as a set of parameters which are estimated jointly, and each set of parameters has a multivariate prior distribution. \
+
 The sets of intercepts of the multinomial regression model have a multivariate normal distribution. The (hyper-) prior for these intercepts thus consists of a prior distribution on the vector of means, and a prior distribution on the covariance matrix. The hyper-prior for the mean intercepts is a multivariate Normal distribution, with, as default, a vector of means equal to 0, and a parameter $K_0$ with which the covariance matrix is multiplied. Here, $K_0$ denotes the number of observations (i.e., the number of hypothetical prior subjects) on which the prior mean vector of zero's is based. By default, $K_0$ is set to 1. The hyper-prior for the covariance matrix between the set of (state specific) intercepts has an Inverse Wishart distribution, for which the variance in the default setting equals 3 + $m$ - 1 for the transition probabilities and 3 + $q$ - 1 for the emission probabilities, and the covariance equals 0. The degrees of freedom of the Inverse Wishart distribution is set to 3 + $m$ - 1 for the transition probabilities and 3 + $q$ - 1 for the emission probabilities.  \
+
 To specify user specific prior distributions, one uses the input option `emiss_hyp_prior` for the emission distribution and `gamma_hyp_prior` for the transition probabilities in the function `mHMM`. Both objects are a list, containing the elements:
 
  * `mu0`, a list containing $m$ matrices; one matrix for each row of the transition probability matrix gamma or the emission probability matrix. Each matrix contains the hypothesized mean values of the intercepts. Hence, each matrix consists of one row (when not including covariates in the model) and $m - 1$ or $q$ - 1 columns.
@@ -240,6 +250,7 @@ plot(out_2st, component = "emiss", dep = 1, col = Voc_col,
      dep_lab = c("Patient vocalizing"), cat_lab = Voc_lab)
 ```
 Here, `component` specifies whether we want to visualize the posterior densities for the transition probability matrix gamma (`component = "gamma"`) or for the emission distribution probabilities (`component = "emiss"`), when using `component = "emiss"` the input variable `dep` specifies which dependent variable we want to inspect (as the variable `p_vocolizing` is the first variable in the set, we set `dep = 1`), `col` specifies the colors to be used when plotting the lines, `dep_lab` denotes the label of the dependent variable we are plotting, and `cat_lab` denotes the labels of the categorical outcomes in the dependent variable. In the plot, the solid line visualizes the posterior density at the group level, while each of the dotted lines visualizes the posterior density of one subject. \
+
 Second, one can plot the transition probabilities obtained with the function `obtain_gamma` with a riverplot: 
 ```{r show plot transition prob, fig.show='hold'}
 # Transition probabilities at the group level and for subject number 1, respectively:
@@ -248,7 +259,6 @@ plot(gamma_subj, subj_nr = 1, col = rep(rev(brewer.pal(3,"PiYG"))[-2], each = m)
 ```
 
 Note that graphically displaying the transition probabilities becomes more informative as the number of states increase. \
-
 
 
 ```{r load 3 and 4 state models, include = FALSE}
@@ -399,5 +409,80 @@ It can be observed that the parameter estimates converge to the same parameter s
 ```{r, include = FALSE}
 graphics::par(old_par)
 ```
+
+### Adding covariates to the model 
+
+As mentioned earlier, it can also be of interest to include covariates in the model. This way, we can investigate the impact of these covariates on the model parameters. For example, using the `nonverbal` data, we can assess whether the dynamics between a patient and a therapist differ for patients depending on their therapeutic outcome or their (standardized) changes in CDI and SCA. For now, we will fit a model including only the covariate `diagnosis`. \
+
+We specify the same general model properties and starting values as when we fitted the 2-state HMM with no covariates earlier:
+
+```{r}
+# specifying general model properties:
+m <- 2
+n_dep <- 4
+q_emiss <- c(3, 2, 3, 2)
+
+# specifying starting values
+start_TM <- diag(.8, m)
+start_TM[lower.tri(start_TM) | upper.tri(start_TM)] <- .2
+start_EM <- list(matrix(c(0.05, 0.90, 0.05, 
+                          0.90, 0.05, 0.05), byrow = TRUE,
+                         nrow = m, ncol = q_emiss[1]), # vocalizing patient
+                  matrix(c(0.1, 0.9, 
+                           0.1, 0.9), byrow = TRUE, nrow = m,
+                         ncol = q_emiss[2]), # looking patient
+                  matrix(c(0.90, 0.05, 0.05, 
+                           0.05, 0.90, 0.05), byrow = TRUE,
+                         nrow = m, ncol = q_emiss[3]), # vocalizing therapist
+                  matrix(c(0.1, 0.9, 
+                           0.1, 0.9), byrow = TRUE, nrow = m,
+                         ncol = q_emiss[4])) # looking therapist
+```
+
+
+Now, we proceed to define the covariate in such a way that it may be included within the function `mHMM`, and we run the function. 
+```{r}
+# Run a model including a covariate. Here, the covariate (diagnosis)
+#predicts the emission distribution for each of the 4 dependent
+# variables:
+
+n_subj <- 10
+xx <- rep(list(matrix(1, ncol = 1, nrow = n_subj)), (n_dep + 1))
+for(i in 2:(n_dep + 1)){
+  xx[[i]] <- cbind(xx[[i]], nonverbal_cov$diagnosis)
+}
+out_2st_c <- mHMM(s_data = nonverbal, xx = xx,
+                  gen = list(m = m, n_dep = n_dep, q_emiss = q_emiss),
+                  start_val = c(list(start_TM), start_EM),
+                  mcmc = list(J = 11, burn_in = 5))
+
+```
+We can achieve the same graphical output as before: 
+```{r, fig.width = 7.2, fig.height = 4}
+Voc_col <- c(brewer.pal(3,"PuBuGn")[c(1,3,2)])
+Voc_lab <- c("Not Speaking", "Speaking", "Back channeling")
+
+plot(out_2st_c, component = "emiss", dep = 1, col = Voc_col, 
+     dep_lab = c("Patient vocalizing"), cat_lab = Voc_lab)
+```
+
+What we are particularly interested in here, though, is visualizing the effect of the covariate on the transition probabilities $\gamma_{k,ij}$. 
+```{r}
+# est_gamma_group <- obtain_gamma(out_2st_c, level = "group")
+# 
+# # plot the obtained transition probabilities
+# plot(est_gamma_group, col = rep(c("green", "blue"), each = m))
+
+
+library(tidyverse)
+nonverbal_cov %>%
+  group_by(diagnosis) %>%
+  obtain_gamma(out_2st_c, level = "group")
+
+
+plot(out_2st_c, component = "gamma", dep = diagnosis, col = Voc_col, 
+     dep_lab = c("Patient vocalizing"), cat_lab = Voc_lab)
+```
+
 ## References
 
