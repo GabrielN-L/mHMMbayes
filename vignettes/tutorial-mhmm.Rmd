@@ -4,7 +4,7 @@ author:
   name: "Emmeke Aarts"
   affiliation: "Department of Methodology and Statistics, Utrecht University, Utrecht, the Netherlands <br>"
 abstract: >
-    With the \code{R} package mHMMbayes you can fit multilevel hidden Markov models. The multilevel hidden Markov model (HMM) is a generalization of the well-known hidden Markov model, tailored to accommodate (intense) longitudinal data of multiple individuals simultaneously. Using a multilevel framework, we allow for heterogeneity in the model parameters (transition probability matrix and conditional distribution), while estimating one overall HMM. The model has a great potential of application in many fields, such as the social sciences and medicine. The model can be fitted on multivariate data with a categorical distribution, and include individual level covariates (allowing for e.g., group comparisons on model parameters). Parameters are estimated using Bayesian estimation utilizing the forward-backward recursion within a hybrid Metropolis within Gibbs sampler. The package also includes a function to simulate data and a function to obtain the most likely hidden state sequence for each individual using the Viterbi algorithm. 
+    With the \code{R} package mHMMbayes you can fit multilevel hidden Markov models. The multilevel hidden Markov model (HMM) is a generalization of the well-known hidden Markov model, tailored to accommodate (intense) longitudinal data of multiple individuals simultaneously. Using a multilevel framework, we allow for heterogeneity in the model parameters (transition probability matrix and conditional distribution), while estimating one overall HMM. The model has a great potential of application in many fields, such as the social sciences and medicine. The model can be fitted on multivariate data with a categorical distribution, and can include individual level covariates (allowing for e.g., group comparisons on model parameters). Parameters are estimated using Bayesian estimation utilizing the forward-backward recursion within a hybrid Metropolis-within-Gibbs sampler. The package also includes a function to simulate data and a function to obtain the most likely hidden state sequence for each individual using the Viterbi algorithm. 
 output: 
   rmarkdown::html_vignette:
     mathjax: default
@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 <br> <br>
 
 ## Introduction
-Hidden Markov models [HMMs; @Rabiner1989] are a machine learning method that have been used in many different scientific fields to describe a sequence of observations for several decades. For example, translating a fragment of spoken words into text [i.e., speech recognition, see e.g. @Rabiner1989; @woodland2002], or the identification of the regions of DNA that encode genes [i.e., gene tagging, see e.g., @krogh1994; @henderson1997; @burge1998]. The development of this package is, however, motivated from the area of social sciences. Due to technological advancements, it becomes increasingly easy to collect long sequences of data on behavior. That is, we can monitor behavior as it unfolds in real time. An example here of is the interaction between a therapist and a patient, where different types of nonverbal communication are registered every second for a period of 15 minutes. When applying HMMs to such behavioral data, they can be used to extract latent behavioral states over time, and model the dynamics of behavior over time. \
+Hidden Markov models [HMMs; @Rabiner1989] are a machine learning method that have been used in many different scientific fields for several decades to describe a sequence of observations. For example, translating a fragment of spoken words into text [i.e., speech recognition, see e.g. @Rabiner1989; @woodland2002], or the identification of the regions of DNA that encode genes [i.e., gene tagging, see e.g., @krogh1994; @henderson1997; @burge1998]. The development of this package is, however, motivated from the area of social sciences. Due to technological advancements, it is becoming increasingly easy to collect long sequences of data on behavior. That is, we can monitor behavior as it unfolds in real time. An example is the interaction between a therapist and a patient, where different types of nonverbal communication are registered every second for a period of 15 minutes. When applying HMMs to such behavioral data, they can be used to extract latent behavioral states over time, and model the dynamics of behavior over time. \
 
 A quite recent development in HMMs is the extension to multilevel HMMs [see e.g., @altman2007; @shirley2010; @rueda2013; @zhang2014; @deHaan2017]. Using the multilevel framework, we can model several sequences (e.g., sequences of different persons) simultaneously, while accommodating the heterogeneity between persons. As a result, we can quantify the amount of variation between persons in their dynamics of behavior, easily perform group comparisons on the model parameters, and investigate how model parameters change as a result of a covariate. For example, are the dynamics between a patient and a therapist different for patients with a good therapeutic outcome and patients with a less favorable therapeutic outcome? \
 
@@ -71,7 +71,7 @@ for the observed outcomes $o = 1, 2, \ldots, q$ and where $\boldsymbol{\theta}_i
 We assume that all parameters in the HMM are independent of $t$, i.e., we assume a time-homogeneous model. In the vignette [Estimation of the multilevel hidden Markov model](estimation-mhmm.pdf) we discuss three methods (i.e., Maximum likelihood, Expectation Maximization or Baum-Welch algorithm, and Bayesian estimation) to estimate the parameters of an HMM. In the package `mHMMbayes`, we chose to use Bayesian estimation because of its flexibility, which we will require in the multilevel framework of the model. 
  
 ## Multilevel hidden Markov models
-Given data of multiple subjects, one may fit the HMM to the data of each subject separately, or fit one and the same HMM model to the data of all subject, under the strong (generally untenable) assumption that the subjects do not differ with respect to the parameters of the HMM. Fitting a different model to each behavioral sequence is not parsimonious, computationally intensive, and results in a large number of parameters estimates. Neither approach lends itself well for a formal comparison (e.g., comparing the parameters over experimental conditions). To facilitate the analysis of multiple subjects, the HMM is extended by putting it in a multilevel framework. \
+Given data of multiple subjects, one may fit the HMM to the data of each subject separately, or fit one and the same HMM model to the data of all subject, under the strong (generally untenable) assumption that the subjects do not differ with respect to the parameters of the HMM. Fitting a different model to each behavioral sequence is not parsimonious, is computationally intensive, and results in a large number of parameters estimates. Neither approach lends itself well for a formal comparison (e.g., comparing the parameters over experimental conditions). To facilitate the analysis of multiple subjects, the HMM is extended by putting it in a multilevel framework. \
 
 In multilevel models, model parameters are specified that pertain to different levels in the data. For example, subject-specific model parameters describe the data collected within each subject, and group level parameters describe what is typically observed within the group of subjects, and the variation observed between subjects. In the implemented multilevel HMM, we allow each subject to have its own unique parameter values within the same HMM model (i.e., identical number and similar composition of the hidden states). Rather than estimating these subject-specific parameters individually, we assume that the parameters of the HMM are random, i.e., follow a given group level distribution. Within this multilevel structure, the mean and the variance of the group level distribution of a given parameter thus expresses the overall mean parameter value in a group of subjects and the parameter variability between the subjects in the group.  \
 
@@ -443,12 +443,12 @@ start_EM <- list(matrix(c(0.05, 0.90, 0.05,
 Now, we proceed to define the covariate in such a way that it may be included within the function `mHMM`, and we run the function. 
 ```{r}
 # Run a model including a covariate. Here, the covariate (diagnosis)
-#predicts the emission distribution for each of the 4 dependent
+#predicts the emission distribution and transition probability distribution for each of the 4 dependent
 # variables:
 
 n_subj <- 10
 xx <- rep(list(matrix(1, ncol = 1, nrow = n_subj)), (n_dep + 1))
-for(i in 2:(n_dep + 1)){
+for(i in 1:(n_dep + 1)){
   xx[[i]] <- cbind(xx[[i]], nonverbal_cov$diagnosis)
 }
 out_2st_c <- mHMM(s_data = nonverbal, xx = xx,
@@ -467,22 +467,115 @@ plot(out_2st_c, component = "emiss", dep = 1, col = Voc_col,
 ```
 
 What we are particularly interested in here, though, is visualizing the effect of the covariate on the transition probabilities $\gamma_{k,ij}$. 
+
 ```{r}
-# est_gamma_group <- obtain_gamma(out_2st_c, level = "group")
-# 
-# # plot the obtained transition probabilities
-# plot(est_gamma_group, col = rep(c("green", "blue"), each = m))
+mean_beta <- colMeans(out_2st_c$gamma_cov_bar)
+mean_int <- colMeans(out_2st_c$gamma_int_bar)
+cov <- as.vector(c(0, 1))
 
+#this provides the mean of alpha_(Gamma)ki, so we should then need to do a random draw from a normal dist
+gamma_alpha_ki <- matrix(NA, nrow = 2, ncol = 2)
+for (i in 1:2){
+  gamma_alpha_ki[i,] <-  mean_int[i] + mean_beta[i]*cov
+}
 
-library(tidyverse)
-nonverbal_cov %>%
-  group_by(diagnosis) %>%
-  obtain_gamma(out_2st_c, level = "group")
+#this converts the above values into probabilities via the logit transform
+gamma_cov <- matrix(NA, nrow = 2, ncol = 2)
+for (i in 1:nrow(gamma_cov)){
+  for (j in 1:ncol(gamma_cov)){
+    gamma_cov[i,j] <- exp(gamma_alpha_ki[i,j])/(1+exp(gamma_alpha_ki[i,j]))
+  }
+}
+gamma_cov[2,] <- 1 - gamma_cov[2,]
+# rownames(gamma_cov) <- c("gamma12", "gamma21")
+# colnames(gamma_cov) <- c("diagnosis0", "diagnosis1")
 
+gamma_cov1 <- matrix(NA, nrow = 2, ncol = 2)
+gamma_cov1[1, ] <- 1 - gamma_cov[1, ]
+gamma_cov1[2, ] <- gamma_cov[1, ]
 
-plot(out_2st_c, component = "gamma", dep = diagnosis, col = Voc_col, 
-     dep_lab = c("Patient vocalizing"), cat_lab = Voc_lab)
+gamma_cov2 <- matrix(NA, nrow = 2, ncol = 2)
+gamma_cov2[1, ] <- 1 - gamma_cov[2, ]
+gamma_cov2[2, ] <- gamma_cov[2, ]
 ```
+
+
+```{r, fig.width = 2.5, fig.height = 4}
+plot(x = cov, y = gamma_cov1[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
+lines(x = cov, y = gamma_cov1[2, ], type = "b")
+axis(side = 1, at = c(0, 1))
+```
+
+```{r, fig.width = 2.5, fig.height = 4}
+plot(x = cov, y = gamma_cov2[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
+lines(x = cov, y = gamma_cov2[2, ], type = "b")
+axis(side = 1, at = c(0, 1))
+```
+
+
+### Simulating data with the package `mHMMbayes`
+
+The package includes a function for simulating data. This can provide examples of different scenarios to test the multilevel HMM model on. 
+
+One example in which we require this function is when we want to run our model with a continuous emission distribution $\boldsymbol{\theta}_{k,i}$ (i.e. subject-specific emission distributions denoting subject-specific probabilities $\boldsymbol{\theta}_{k,i}$ of continuous outcomes within hidden state $i$).\
+
+We will illustrate how this type of data can be simulated with the `mHMMbayes` package, and in the next section we will fit the mHMM model to this simulated data. /
+
+Here, the first four lines of code represent the 
+```{r message=FALSE, include=FALSE}
+source('~/Desktop/mHMMbayes/R/sim_mHMM.R', echo=TRUE)
+source('~/Desktop/mHMMbayes/R/int_to_prob.R', echo=TRUE)
+#' # simulating multivariate continuous data
+n_t     <- 100
+n       <- 10
+m       <- 3
+n_dep   <- 2
+
+gamma   <- matrix(c(0.8, 0.1, 0.1,
+                    0.2, 0.7, 0.1,
+                    0.2, 0.2, 0.6), ncol = m, byrow = TRUE)
+
+emiss_distr <- list(matrix(c( 5, 1,
+                              10, 1,
+                              15, 1), nrow = m, byrow = TRUE),
+                    matrix(c(0.5, 0.1,
+                             1.0, 0.2,
+                             2.0, 0.1), nrow = m, byrow = TRUE))
+
+data_cont <- sim_mHMM(n_t = n_t, n = n, m = m, n_dep = n_dep, data_distr = 'continuous',
+                      gamma = gamma, emiss_distr = emiss_distr, var_gamma = .5, var_emiss = c(.5, 0.01))
+```
+
+
+### Using a continuous emission distribution
+In the previous example, we fitted our multilevel Hidden Markov Model on example data where the subject-specific emission distributions denoted subject-specific probabilities $\boldsymbol{\theta}_{k,i}$ of categorical outcomes within hidden state $i$. However, as we will now show, this is also possible for continuous emission distributions. To demonstrate this, we will apply our model to the data we just simulated. 
+
+```{r}
+source('~/Desktop/mHMMbayes/R/mHMM_cont.R', echo=TRUE)
+data_cont <- sim_mHMM(n_t = n_t, n = n, m = m, n_dep = n_dep, data_distr = 'continuous',
+                   gamma = gamma, emiss_distr = emiss_distr, var_gamma = .1, var_emiss = c(.5, 0.01))
+
+# Specify hyper-prior for the continuous emission distribution
+hyp_pr <- list(
+                emiss_mu0 = list(matrix(c(3,7,17), nrow = 1), matrix(c(0.7, 0.8, 1.8), nrow = 1)),
+                emiss_K0  = list(1, 1),
+                emiss_nu  = list(1, 1),
+                emiss_V   = list(rep(2, m), rep(1, m)),
+                emiss_a0  = list(rep(1, m), rep(1, m)),
+                emiss_b0  = list(rep(1, m), rep(1, m)))
+
+# Run the model on the simulated data:
+ out_3st_cont_sim <- mHMM_cont(s_data = data_cont$obs,
+                     gen = list(m = m, n_dep = n_dep),
+                     start_val = c(list(gamma), emiss_distr),
+                     emiss_hyp_prior = hyp_pr,
+                     mcmc = list(J = 11, burn_in = 5))
+
+```
+
+
+
+
 
 ## References
 
