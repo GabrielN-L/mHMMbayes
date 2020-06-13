@@ -23,6 +23,17 @@ knitr::opts_chunk$set(
 )
 ```
 <br> <br>
+```{r include=FALSE}
+source('~/Desktop/mHMMbayes/R/sim_mHMM.R', echo=F)
+source('~/Desktop/mHMMbayes/R/int_to_prob.R', echo=F)
+source('~/Desktop/mHMMbayes/R/mHMM_cont.R', echo=F)
+source('~/Desktop/mHMMbayes/R/summary.mHMM.R', echo=F)
+```
+
+```{r}
+# summary.mHMM(out_2st_c)
+# summary(out_2st)
+```
 
 ## Introduction
 Hidden Markov models [HMMs; @Rabiner1989] are a machine learning method that have been used in many different scientific fields for several decades to describe a sequence of observations. For example, translating a fragment of spoken words into text [i.e., speech recognition, see e.g. @Rabiner1989; @woodland2002], or the identification of the regions of DNA that encode genes [i.e., gene tagging, see e.g., @krogh1994; @henderson1997; @burge1998]. The development of this package is, however, motivated from the area of social sciences. Due to technological advancements, it is becoming increasingly easy to collect long sequences of data on behavior. That is, we can monitor behavior as it unfolds in real time. An example is the interaction between a therapist and a patient, where different types of nonverbal communication are registered every second for a period of 15 minutes. When applying HMMs to such behavioral data, they can be used to extract latent behavioral states over time, and model the dynamics of behavior over time. \
@@ -469,8 +480,9 @@ plot(out_2st_c, component = "emiss", dep = 1, col = Voc_col,
 What we are particularly interested in here, though, is visualizing the effect of the covariate on the transition probabilities $\gamma_{k,ij}$. 
 
 ```{r}
-mean_beta <- colMeans(out_2st_c$gamma_cov_bar)
-mean_int <- colMeans(out_2st_c$gamma_int_bar)
+burn_in <- 5
+mean_beta <- colMeans(out_2st_c$gamma_cov_bar[-(1:burn_in), ])
+mean_int <- colMeans(out_2st_c$gamma_int_bar[-(1:burn_in), ])
 cov <- as.vector(c(0, 1))
 
 #this provides the mean of alpha_(Gamma)ki, so we should then need to do a random draw from a normal dist
@@ -490,28 +502,88 @@ gamma_cov[2,] <- 1 - gamma_cov[2,]
 # rownames(gamma_cov) <- c("gamma12", "gamma21")
 # colnames(gamma_cov) <- c("diagnosis0", "diagnosis1")
 
-gamma_cov1 <- matrix(NA, nrow = 2, ncol = 2)
-gamma_cov1[1, ] <- 1 - gamma_cov[1, ]
-gamma_cov1[2, ] <- gamma_cov[1, ]
+gamma_cov_s1 <- matrix(NA, nrow = 2, ncol = 2)
+gamma_cov_s1[1, ] <- 1 - gamma_cov[1, ]
+gamma_cov_s1[2, ] <- gamma_cov[1, ]
 
-gamma_cov2 <- matrix(NA, nrow = 2, ncol = 2)
-gamma_cov2[1, ] <- 1 - gamma_cov[2, ]
-gamma_cov2[2, ] <- gamma_cov[2, ]
+gamma_cov_s2 <- matrix(NA, nrow = 2, ncol = 2)
+gamma_cov_s2[1, ] <- 1 - gamma_cov[2, ]
+gamma_cov_s2[2, ] <- gamma_cov[2, ]
 ```
 
 
 ```{r, fig.width = 2.5, fig.height = 4}
-plot(x = cov, y = gamma_cov1[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
-lines(x = cov, y = gamma_cov1[2, ], type = "b")
+plot(x = cov, y = gamma_cov_s1[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
+lines(x = cov, y = gamma_cov_s1[2, ], type = "b")
 axis(side = 1, at = c(0, 1))
 ```
 
 ```{r, fig.width = 2.5, fig.height = 4}
-plot(x = cov, y = gamma_cov2[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
-lines(x = cov, y = gamma_cov2[2, ], type = "b")
+plot(x = cov, y = gamma_cov_s2[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), xaxt = 'n', ylab = "Transition probability", xlab = "Diagnosis")
+lines(x = cov, y = gamma_cov_s2[2, ], type = "b")
 axis(side = 1, at = c(0, 1))
 ```
 
+The same effect can be achieved if we were to have used a different covariate, standardized CDI change, say.
+```{r}
+# Run a model including a covariate. Here, the covariate (standardized CDI
+# change) predicts the emission distribution and transition probability dist. for each of the 4 dependent
+# variables:
+
+n_subj <- 10
+xx <- rep(list(matrix(1, ncol = 1, nrow = n_subj)), (n_dep + 1))
+for(i in 1:(n_dep + 1)){
+  xx[[i]] <- cbind(xx[[i]], nonverbal_cov$std_CDI_change)
+}
+out_2st_c1 <- mHMM(s_data = nonverbal, xx = xx,
+                  gen = list(m = m, n_dep = n_dep, q_emiss = q_emiss),
+                  start_val = c(list(start_TM), start_EM),
+                  mcmc = list(J = 11, burn_in = 5))
+
+```
+```{r}
+burn_in <- 5
+mean_beta1 <- colMeans(out_2st_c1$gamma_cov_bar[-(1:burn_in), ])
+mean_int1 <- colMeans(out_2st_c1$gamma_int_bar[-(1:burn_in), ])
+cov1 <- nonverbal_cov$std_CDI_change
+
+#this provides the mean of alpha_(Gamma)ki, so we should then need to do a random draw from a normal dist
+gamma_alpha_ki1 <- matrix(NA, nrow = 2, ncol = length(cov1))
+for (i in 1:2){
+  gamma_alpha_ki1[i,] <-  mean_int1[i] + mean_beta1[i]*cov1
+}
+
+#this converts the above values into probabilities via the logit transform
+gamma_cov1 <- matrix(NA, nrow = 2, ncol = length(cov1))
+for (i in 1:nrow(gamma_cov1)){
+  for (j in 1:ncol(gamma_cov1)){
+    gamma_cov1[i,j] <- exp(gamma_alpha_ki1[i,j])/(1+exp(gamma_alpha_ki1[i,j]))
+  }
+}
+gamma_cov1[2,] <- 1 - gamma_cov1[2,]
+# rownames(gamma_cov) <- c("gamma12", "gamma21")
+# colnames(gamma_cov) <- c("diagnosis0", "diagnosis1")
+
+gamma_cov1_s1 <- matrix(NA, nrow = 2, ncol = length(cov1))
+gamma_cov1_s1[1, ] <- 1 - gamma_cov1[1, ]
+gamma_cov1_s1[2, ] <- gamma_cov1[1, ]
+
+gamma_cov1_s2 <- matrix(NA, nrow = 2, ncol = length(cov1))
+gamma_cov1_s2[1, ] <- 1 - gamma_cov1[2, ]
+gamma_cov1_s2[2, ] <- gamma_cov1[2, ]
+```
+
+```{r, fig.width = 2.5, fig.height = 4}
+plot(x = cov1, y = gamma_cov1_s1[1, ], type = "b",ylim = c(0, 1), xlim = c(-2, 2), xaxt = 'n', ylab = "Transition probability", xlab = "Standardized CDI change")
+lines(x = cov1, y = gamma_cov1_s1[2, ], type = "b")
+axis(side = 1, at = c(-2, -1, 0, 1, 2))
+```
+
+```{r, fig.width = 2.5, fig.height = 4}
+plot(x = cov1, y = gamma_cov1_s2[1, ], type = "b",ylim = c(0, 1), xlim = c(-2, 2), xaxt = 'n', ylab = "Transition probability", xlab = "Standardized CDI change")
+lines(x = cov1, y = gamma_cov1_s2[2, ], type = "b")
+axis(side = 1, at = c(-2, -1, 0, 1, 2))
+```
 
 ### Simulating data with the package `mHMMbayes`
 
@@ -523,8 +595,6 @@ We will illustrate how this type of data can be simulated with the `mHMMbayes` p
 
 Here, the first four lines of code represent the 
 ```{r message=FALSE, include=FALSE}
-source('~/Desktop/mHMMbayes/R/sim_mHMM.R', echo=TRUE)
-source('~/Desktop/mHMMbayes/R/int_to_prob.R', echo=TRUE)
 #' # simulating multivariate continuous data
 n_t     <- 100
 n       <- 10
@@ -551,7 +621,6 @@ data_cont <- sim_mHMM(n_t = n_t, n = n, m = m, n_dep = n_dep, data_distr = 'cont
 In the previous example, we fitted our multilevel Hidden Markov Model on example data where the subject-specific emission distributions denoted subject-specific probabilities $\boldsymbol{\theta}_{k,i}$ of categorical outcomes within hidden state $i$. However, as we will now show, this is also possible for continuous emission distributions. To demonstrate this, we will apply our model to the data we just simulated. 
 
 ```{r}
-source('~/Desktop/mHMMbayes/R/mHMM_cont.R', echo=TRUE)
 data_cont <- sim_mHMM(n_t = n_t, n = n, m = m, n_dep = n_dep, data_distr = 'continuous',
                    gamma = gamma, emiss_distr = emiss_distr, var_gamma = .1, var_emiss = c(.5, 0.01))
 
@@ -565,13 +634,14 @@ hyp_pr <- list(
                 emiss_b0  = list(rep(1, m), rep(1, m)))
 
 # Run the model on the simulated data:
- out_3st_cont_sim <- mHMM_cont(s_data = data_cont$obs,
-                     gen = list(m = m, n_dep = n_dep),
-                     start_val = c(list(gamma), emiss_distr),
-                     emiss_hyp_prior = hyp_pr,
-                     mcmc = list(J = 11, burn_in = 5))
+ # out_3st_cont_sim <- mHMM_cont(s_data = data_cont$obs,
+ #                     gen = list(m = m, n_dep = n_dep),
+ #                     start_val = c(list(gamma), emiss_distr),
+ #                     emiss_hyp_prior = hyp_pr,
+ #                     mcmc = list(J = 11, burn_in = 5))
 
 ```
+
 
 
 
