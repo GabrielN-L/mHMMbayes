@@ -9,12 +9,24 @@ summary.mHMM <- function(object, ...){
   m       <- input$m
   q_emiss <- input$q_emiss
   n_dep   <- input$n_dep
+  xx <- input$xx
   gamma_pop <- matrix(round(apply(object$gamma_prob_bar[((burn_in + 1): J),], 2, median),3), byrow = TRUE, ncol = m, nrow = m)
   colnames(gamma_pop) <- paste("To state", 1:m)
   rownames(gamma_pop) <- paste("From state", 1:m)
   cat("State transition probability matrix","\n",  "(at the group level):", "\n", "\n")
   print(gamma_pop)
+  cat("\n")
+
+  if(!is.null(dim(object$gamma_cov_bar))){
+    mean_beta <- colMeans(object$gamma_cov_bar[-(1:burn_in), ])
+    gamma_cov <- cbind(-mean_beta, mean_beta)
+    colnames(gamma_cov) <- paste("To state", 1:m)
+    rownames(gamma_cov) <- paste("From state", 1:m)
+    cat("Covariate contribution to transition probabilities", "\n")
+    print(gamma_cov)
+  }
   cat("\n", "\n")
+
   cat("Emission distribution for each of the dependent variables","\n",  "(at the group level):", "\n", "\n")
   EM_pop <- vector("list", n_dep)
   names(EM_pop) <- dep_labels
