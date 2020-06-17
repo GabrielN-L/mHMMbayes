@@ -18,8 +18,9 @@ summary.mHMM <- function(object, ...){
   cat("\n")
 
   if(!is.null(dim(object$gamma_cov_bar))){
-    mean_beta <- colMeans(object$gamma_cov_bar[-(1:burn_in), ])
-    gamma_cov <- cbind(-mean_beta, mean_beta)
+    #mean_beta <- colMeans(object$gamma_cov_bar[-(1:burn_in), ])
+    median_beta <- matrix(round(apply(object$gamma_cov_bar[-(1:burn_in), ], 2, median), 3), byrow = TRUE, ncol = m, nrow = 1)
+    gamma_cov <- t(rbind(-median_beta, median_beta))
     colnames(gamma_cov) <- paste("To state", 1:m)
     rownames(gamma_cov) <- paste("From state", 1:m)
     cat("Covariate contribution to transition probabilities", "\n")
@@ -37,4 +38,15 @@ summary.mHMM <- function(object, ...){
   }
   print(EM_pop)
   cat("\n")
+
+mean_theta <- vector("list", n_dep)
+names(mean_theta) <- dep_labels
+for(i in 1:n_dep){
+  mean_theta[[i]] <- matrix(round(apply(object$emiss_cov_bar[[i]][((burn_in + 1): J),], 2, median),3), byrow = TRUE, ncol = q_emiss[i], nrow = m)
+}
+if(!is.null(dim(object$emiss_cov_bar))){
+  cat("Covariate contribution to emission distributions", "\n")
+  print(mean_theta)
+  cat("\n")
+}
 }
