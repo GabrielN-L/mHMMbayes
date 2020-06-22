@@ -28,10 +28,17 @@ source('~/Desktop/mHMMbayes/R/sim_mHMM.R', echo=F)
 source('~/Desktop/mHMMbayes/R/int_to_prob.R', echo=F)
 source('~/Desktop/mHMMbayes/R/mHMM_cont.R', echo=F)
 source('~/Desktop/mHMMbayes/R/summary.mHMM.R', echo=F)
+source('~/Desktop/mHMMbayes/R/utility_func_mHMM.R', echo=F)
+source('~/Desktop/mHMMbayes/R/forward_prob.R', echo=F)
+source('~/Desktop/mHMMbayes/R/forward_prob_cpp.R', echo=F)
+source('~/Desktop/mHMMbayes/R/RcppExports.R', echo=F)
+devtools::install_github("emmekeaarts/mHMMbayes@develop")
+
+
 ```
 
 ```{r}
-summary.mHMM(out_2st_c)
+#summary.mHMM(out_2st_c)
 # summary(out_2st)
 ```
 
@@ -477,7 +484,7 @@ plot(out_2st_c, component = "emiss", dep = 1, col = Voc_col,
      dep_lab = c("Patient vocalizing"), cat_lab = Voc_lab)
 ```
 
-What we are particularly interested in here, though, is visualizing the effect of the covariate on the transition probabilities $\gamma_{k,ij}$. 
+What we are particularly interested in here, though, is visualizing the effect of the covariate on the transition probabilities $\gamma_{k,ij}$ and the state-dependent probabilities $\theta_{ki}$. First, we plot the transition probabilities $\gamma_{k,ij}$ as a function of the covariate `diagnosis`. 
 
 ```{r}
 burn_in <- 5
@@ -523,6 +530,51 @@ plot(x = cov, y = gamma_cov_s2[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), 
 lines(x = cov, y = gamma_cov_s2[2, ], type = "b")
 axis(side = 1, at = c(0, 1))
 ```
+Next, we plot the state-dependent probabilities $\theta_{ki}$ as a function of `diagnosis`. 
+
+```{r}
+mean_cov_emiss <- vector("list", n_dep)
+mean_int_emiss <- vector("list", n_dep)
+cov <- as.vector(c(0, 1))
+emiss_alpha_ki <- vector("list", n_dep)
+emiss_cov <- vector("list", n_dep)
+emiss_cov_prob <- vector("list", n_dep)
+
+for (i in 1:n_dep){
+  mean_cov_emiss[[i]] <- colMeans(out_2st_c$emiss_cov_bar[[i]][-(1:burn_in), ])
+  mean_int_emiss[[i]] <- colMeans(out_2st_c$emiss_int_bar[[i]][-(1:burn_in), ])
+  
+  emiss_alpha_ki[[i]] <- matrix(NA, ncol = length(mean_cov_emiss[[i]]), nrow = 2)
+  emiss_cov[[i]] <- matrix(NA, ncol = length(mean_cov_emiss[[i]])/2, nrow = 4)
+  emiss_cov_prob[[i]] <- matrix(NA, ncol = q_emiss[i], nrow = 4)
+  
+  #this provides the mean of alpha_(Gamma)ki, so we should then need to do a random draw from a normal dist
+  for (j in 1:length(mean_cov_emiss[[i]])){
+    emiss_alpha_ki[[i]][,j] <-  mean_int_emiss[[i]][j] + mean_cov_emiss[[i]][j]*cov
+  }
+  
+  for (j in 1:2){
+    emiss_cov[[i]][j, ] <- emiss_alpha_ki[[i]][j , 1:(q_emiss[i]-1)]
+  }
+  for (j in 3:4){
+        emiss_cov[[i]][j, ] <- emiss_alpha_ki[[i]][j-2, -(1:(q_emiss[i]-1))]
+  }
+
+  emiss_cov_prob[[i]] <- apply(emiss_cov[[i]], 1, int_to_prob)
+  rownames(emiss_cov_prob[[i]]) <- paste("Category", 1:q_emiss[i])
+  colnames(emiss_cov_prob[[i]]) <- c("S1, Diagnosis = 0", "S1, Diagnosis = 1", "S2, Diagnosis = 0", "S2, Diagnosis = 1")
+  names(emiss_cov_prob) <- out_2st_c$input$dep_labels
+}
+
+```
+
+```{r, fig.width = 7.2, fig.height = 4}
+for (i in 1:n_dep){
+  for (j in 1:4){
+    plot(x = as.factor(rownames(emiss_cov_prob[[i]])), y = emiss_cov_prob[[i]][, j], type = "p",ylim = c(0, 1), ylab = "Probability", xlab = "Category", main = paste(names(emiss_cov_prob)[i]), colnames(emiss_cov_prob[[i]])[j])
+  }
+}
+```
 
 The same effect can be achieved if we were to have used a different covariate, standardized CDI change, say.
 ```{r}
@@ -541,6 +593,7 @@ out_2st_c1 <- mHMM(s_data = nonverbal, xx = xx,
                   mcmc = list(J = 11, burn_in = 5))
 
 ```
+
 ```{r}
 burn_in <- 5
 mean_beta1 <- colMeans(out_2st_c1$gamma_cov_bar[-(1:burn_in), ])
@@ -584,6 +637,8 @@ plot(x = cov1, y = gamma_cov1_s2[1, ], type = "b",ylim = c(0, 1), xlim = c(-2, 2
 lines(x = cov1, y = gamma_cov1_s2[2, ], type = "b")
 axis(side = 1, at = c(-2, -1, 0, 1, 2))
 ```
+
+
 
 ### Simulating data with the package `mHMMbayes`
 
@@ -634,11 +689,11 @@ hyp_pr <- list(
                 emiss_b0  = list(rep(1, m), rep(1, m)))
 
 # Run the model on the simulated data:
- # out_3st_cont_sim <- mHMM_cont(s_data = data_cont$obs,
- #                     gen = list(m = m, n_dep = n_dep),
- #                     start_val = c(list(gamma), emiss_distr),
- #                     emiss_hyp_prior = hyp_pr,
- #                     mcmc = list(J = 11, burn_in = 5))
+ out_3st_cont_sim <- mHMM_cont(s_data = data_cont$obs,
+                     gen = list(m = m, n_dep = n_dep),
+                     start_val = c(list(gamma), emiss_distr),
+                     emiss_hyp_prior = hyp_pr,
+                     mcmc = list(J = 11, burn_in = 5))
 
 ```
 
