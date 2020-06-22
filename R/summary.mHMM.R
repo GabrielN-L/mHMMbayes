@@ -42,7 +42,9 @@ summary.mHMM <- function(object, ...){
 mean_theta <- vector("list", n_dep)
 names(mean_theta) <- dep_labels
 for(i in 1:n_dep){
-  mean_theta[[i]] <- matrix(round(apply(object$emiss_cov_bar[[i]][((burn_in + 1): J),], 2, median),3), byrow = TRUE, ncol = q_emiss[i], nrow = m)
+  mean_theta[[i]] <- matrix(round(apply(object$emiss_cov_bar[[i]][((burn_in + 1): J),], 2, median), 3), byrow = TRUE, ncol = q_emiss[i]-1, nrow = m)
+  colnames(mean_theta[[i]]) <- paste("Category", 2:q_emiss[i])
+  rownames(mean_theta[[i]]) <- paste("State", 1:m)
 }
 if(!is.null(dim(object$emiss_cov_bar))){
   cat("Covariate contribution to emission distributions", "\n")
