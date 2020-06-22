@@ -596,14 +596,14 @@ mHMM_cont <- function(s_data, gen, xx = NULL, start_val, emiss_hyp_prior, mcmc, 
 
     # For each subject, obtain sampled state sequence with subject individual parameters ----------
     for(s in 1:n_subj){
-      # Run forward algorithm, obtain subject specific forward proababilities and log likelihood
+      # Run forward algorithm, obtain subject specific forward probabilities and log likelihood
       forward				<- cont_mult_fw_r_to_cpp(x = subj_data[[s]]$y, m = m, emiss = emiss[[s]], gamma = gamma[[s]], n_dep = n_dep, delta=NULL)
       alpha         <- forward[[1]]
       c             <- max(forward[[2]][, subj_data[[s]]$n])
       llk           <- c + log(sum(exp(forward[[2]][, subj_data[[s]]$n] - c)))
       PD_subj[[s]][iter, sum(n_dep * m * 2) + m * m + 1] <- llk
 
-      # Using the forward probabilites, sample the state sequence in a backward manner.
+      # Using the forward probabilities, sample the state sequence in a backward manner.
       # In addition, saves state transitions in trans, and conditional observations within states in cond_y
       trans[[s]]					                  <- vector("list", m)
       sample_path[[s]][n_vary[[s]], iter] 	<- sample(1:m, 1, prob = c(alpha[, n_vary[[s]]]))
