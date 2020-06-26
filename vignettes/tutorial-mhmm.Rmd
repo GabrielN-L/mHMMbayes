@@ -243,7 +243,7 @@ out_2st
 ```
 The `summary` method provides information on the estimated parameters. That is, the point estimates of the posterior distribution for the transition probability matrix and the emission distribution of each of the dependent variables at the group level: 
 ```{r show summary model}
-summary(out_2st)
+#summary(out_2st)
 ```
 The resulting model indicates 2 well separated states: one in which the patient is speaking and one in which the therapist is speaking. Looking behavior is quite similar for both the patient and the therapist in the 2 states. Information on the estimated parameters can also be obtained using the function `obtain_gamma` and `obtain_emiss`. These functions allow the user not only to inspect the estimated parameters at the group level, but for each subject individually as well, by specifying the input variable `level = "subject"`: \
 ```{r show obtain gamma function}
@@ -289,7 +289,7 @@ out_4st <- out3
 ### Determining the number of hidden states
 The first step in developing a HMM is to determine the number of states $m$ that best describes the observed data, and is a model selection problem. When modelling, for example, behavior, the task is to define the states by clusters of observed behavioral outcomes that provide a reasonable, theoretically interpretable, description of the data. We suggest using a combination of the Akaike Information Criterion (AIC) and the theoretical interpretability of the estimated states to choose between models^[Note that the likelihood ratio test, commonly used to compare nested models, cannot be used in case of the HMM (i.e., the difference in the log-likelihoods between models is not $\chi^2$ distributed @ryden2008).]. In the example dataset, the 2, 3 and 4 state model result in an AIC of 3279, 3087, and 2959, respectively. According to model fit indices, the 4 state model is clearly the best model^[We note, however, that the AIC approximates the posterior distribution of the parameters by a Gaussian distribution, which might not be appropriate for models including parameters on the boundary of the parameter space (e.g., close to 0 or 1 in case of probability estimates), or for small data sets, as exemplified by @scott2002. Model selection is therefore not a straightforward procedure in the context of HMM, and the choices remain subjective.]. Let's inspect the composition of the states for the 4 state model, and the transition probabilities: 
 ```{r show 4 state model, fig.width = 5, fig.height = 3}
-summary(out_4st)
+#summary(out_4st)
 
 m <- 4
 plot(obtain_gamma(out_4st), cex = .5, col = rep(rev(brewer.pal(5,"PiYG"))[-3], each = m))
@@ -530,6 +530,7 @@ plot(x = cov, y = gamma_cov_s2[1, ], type = "b",ylim = c(0, 1), xlim = c(0, 1), 
 lines(x = cov, y = gamma_cov_s2[2, ], type = "b")
 axis(side = 1, at = c(0, 1))
 ```
+
 Next, we plot the state-dependent probabilities $\theta_{ki}$ as a function of `diagnosis`. 
 
 ```{r}
@@ -638,7 +639,52 @@ lines(x = cov1, y = gamma_cov1_s2[2, ], type = "b")
 axis(side = 1, at = c(-2, -1, 0, 1, 2))
 ```
 
+```{r}
+mean_cov_emiss1 <- vector("list", n_dep)
+mean_int_emiss1 <- vector("list", n_dep)
+cov1 <- nonverbal_cov$std_CDI_change
+emiss_alpha_ki1 <- vector("list", n_dep)
+emiss_cov1 <- vector("list", n_dep)
+emiss_cov_prob1 <- vector("list", n_dep)
 
+for (i in 1:n_dep){
+  mean_cov_emiss1[[i]] <- colMeans(out_2st_c1$emiss_cov_bar[[i]][-(1:burn_in), ])
+  mean_int_emiss1[[i]] <- colMeans(out_2st_c1$emiss_int_bar[[i]][-(1:burn_in), ])
+  
+  emiss_alpha_ki1[[i]] <- matrix(NA, ncol = length(mean_cov_emiss1[[i]]), nrow = 10)
+  emiss_cov1[[i]] <- matrix(NA, ncol = length(mean_cov_emiss1[[i]])/2, nrow = 20)
+  emiss_cov_prob1[[i]] <- matrix(NA, ncol = q_emiss[i], nrow = 20)
+  
+  #this provides the mean of alpha_(Gamma)ki, so we should then need to do a random draw from a normal dist
+  for (j in 1:length(mean_cov_emiss1[[i]])){
+    emiss_alpha_ki1[[i]][,j] <-  mean_int_emiss1[[i]][j] + mean_cov_emiss1[[i]][j]*cov1
+  }
+  
+  for (j in 1:10){
+    emiss_cov1[[i]][j, ] <- emiss_alpha_ki1[[i]][j , 1:(q_emiss[i]-1)]
+  }
+  for (j in 11:20){
+        emiss_cov1[[i]][j, ] <- emiss_alpha_ki1[[i]][(j-10), -(1:(q_emiss[i]-1))]
+  }
+
+  emiss_cov_prob1[[i]] <- apply(emiss_cov1[[i]], 1, int_to_prob)
+  rownames(emiss_cov_prob1[[i]]) <- paste("Category", 1:q_emiss[i])
+  #colnames(emiss_cov_prob1[[i]]) <- c("S1, Diagnosis = 0", "S1, Diagnosis = 1", "S2, Diagnosis = 0", "S2, Diagnosis = 1")
+  #names(emiss_cov_prob1) <- out_2st_c$input$dep_labels
+}
+
+```
+
+```{r, fig.width = 7.2, fig.height = 4}
+for (i in 1:n_dep){
+  plot(x = c(1:nrow(emiss_cov_prob1[[i]])), y = emiss_cov_prob1[[i]][, 1], type = "p", pch = 1, ylim = c(0, 1), ylab = "Probability", xaxt = "none", main = paste(names(emiss_cov_prob1)[i]), colnames(emiss_cov_prob1[[i]])[1])
+  axis(2, rownames(emiss_cov_prob1[[i]])[1])
+  for (j in 2:10){
+    lines(x = c(1:nrow(emiss_cov_prob1[[i]])), y = emiss_cov_prob1[[i]][, j], type = "p", pch = 1, ylim = c(0, 1), ylab = "Probability", xaxt = "none", xlab = rownames(emiss_cov_prob1[[i]]), main = paste(names(emiss_cov_prob1)[i]), colnames(emiss_cov_prob1[[i]])[j])
+      axis(2, rownames(emiss_cov_prob1[[i]])[j])
+  }
+}
+```
 
 ### Simulating data with the package `mHMMbayes`
 
@@ -646,9 +692,9 @@ The package includes a function for simulating data. This can provide examples o
 
 One example in which we require this function is when we want to run our model with a continuous emission distribution $\boldsymbol{\theta}_{k,i}$ (i.e. subject-specific emission distributions denoting subject-specific probabilities $\boldsymbol{\theta}_{k,i}$ of continuous outcomes within hidden state $i$).\
 
-We will illustrate how this type of data can be simulated with the `mHMMbayes` package, and in the next section we will fit the mHMM model to this simulated data. /
+We will illustrate how this type of data can be simulated with the `mHMMbayes` package, and in the next section we will fit the mHMM model to this simulated data. \
 
-Here, the first four lines of code represent the 
+In the first four lines of code we define the length of the observed sequence to be simulated for each subject, the number of subjects, the number of states and the number of dependent variables, respectively. Next, values for the average transition probability matrix (`gamma`) and emission distributions (`emiss_distr`) are specified. Other input in the sim_mHMM() function includes `var_gamma` and `var_emiss`, which represent the variance of the transition probability matrix and emission distributions, respectively. The input data_distr = 'continuous' is required when simulating continuous data. 
 ```{r message=FALSE, include=FALSE}
 #' # simulating multivariate continuous data
 n_t     <- 100
